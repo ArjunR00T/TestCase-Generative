@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 // import { Loader2, CheckCircle, ChevronDown, ChevronUp, TestTube2, Copy, Download, Save } from 'lucide-react';
-import { Loader2, CheckCircle,TestTube2 } from 'lucide-react';
+import { Loader2, CheckCircle, TestTube2 } from 'lucide-react';
+import axios from 'axios';
 
 interface TestCase {
   id: string;
@@ -12,183 +13,69 @@ interface TestCase {
 }
 
 interface SimilarExample {
-  userStory: string;
-  testCases: TestCase[];
-  project: string;
-  date: string;
+  user_story: string;
+  test_cases: TestCase[];
 }
+
 
 const TestCaseGenerator: React.FC = () => {
   const [userStory, setUserStory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [generatedTestCases, setGeneratedTestCases] = useState<TestCase[]>([]);
+  const [similarExamples, setSimilarExamples] = useState<SimilarExample[]>([]);
   // const [showSimilarExamples, setShowSimilarExamples] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState("testCases");
 
 
-  // const projects = [
-  //   { id: 'ecommerce-platform', name: 'E-Commerce Platform' },
-  //   { id: 'user-management', name: 'User Management System' },
-  //   { id: 'payment-gateway', name: 'Payment Gateway' },
-  //   { id: 'inventory-system', name: 'Inventory Management' }
-  // ];
-
-  // Mock similar examples data
-  const similarExamples: SimilarExample[] = [
-    {
-      userStory: "As a registered user, I want to log into the application so that I can access my personal dashboard and account settings.",
-      project: "User Management System",
-      date: "2024-01-15",
-      testCases: [
-        {
-          id: '1',
-          title: 'Valid login with correct credentials',
-          steps: [
-            'Navigate to the login page',
-            'Enter valid registered email address',
-            'Enter correct password',
-            'Click the "Sign In" button'
-          ],
-          expectedResult: 'User is successfully authenticated and redirected to the dashboard page',
-          priority: 'Critical',
-          category: 'Authentication'
-        },
-        {
-          id: '2',
-          title: 'Invalid login with incorrect password',
-          steps: [
-            'Navigate to the login page',
-            'Enter valid registered email address',
-            'Enter incorrect password',
-            'Click the "Sign In" button'
-          ],
-          expectedResult: 'Error message "Invalid credentials" is displayed and user remains on login page',
-          priority: 'High',
-          category: 'Authentication'
-        }
-      ]
-    },
-    {
-      userStory: "As a customer, I want to reset my password so that I can regain access to my account when I forget it.",
-      project: "E-Commerce Platform",
-      date: "2024-01-10",
-      testCases: [
-        {
-          id: '3',
-          title: 'Password reset with valid registered email',
-          steps: [
-            'Click "Forgot Password" link on login page',
-            'Enter valid registered email address',
-            'Click "Send Reset Link" button',
-            'Check email inbox for reset link'
-          ],
-          expectedResult: 'Password reset email is sent successfully and confirmation message is displayed',
-          priority: 'High',
-          category: 'Authentication'
-        }
-      ]
-    }
-  ];
-
   const generateTestCases = async () => {
-    if (!userStory.trim()) return;
-
     setIsLoading(true);
     setHasGenerated(false);
+    let data = { similiar: [], test_cases: [] };
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockTestCases: TestCase[] = [
-        {
-          id: '1',
-          title: 'Happy Path - Successful Feature Execution',
-          steps: [
-            'Navigate to the feature entry point',
-            'Verify all required fields are displayed',
-            'Enter valid test data in all required fields',
-            'Click submit/execute button',
-            'Verify successful completion message'
-          ],
-          expectedResult: 'Feature executes successfully, user achieves intended goal, and appropriate success feedback is provided',
-          priority: 'Critical',
-          category: 'Functional'
-        },
-        {
-          id: '2',
-          title: 'Input Validation - Invalid Data Handling',
-          steps: [
-            'Navigate to the feature entry point',
-            'Enter invalid data in required fields (empty, special characters, exceeding limits)',
-            'Attempt to submit the form',
-            'Verify validation messages are displayed',
-            'Confirm form submission is prevented'
-          ],
-          expectedResult: 'Clear validation error messages are displayed, form submission is blocked, and system remains stable',
-          priority: 'High',
-          category: 'Validation'
-        },
-        {
-          id: '3',
-          title: 'Authorization - Access Control Verification',
-          steps: [
-            'Login with user account having insufficient permissions',
-            'Attempt to access the restricted feature',
-            'Verify access denial response',
-            'Check that no unauthorized actions can be performed'
-          ],
-          expectedResult: 'Access is properly denied with appropriate error message, user is redirected or blocked from unauthorized actions',
-          priority: 'Critical',
-          category: 'Security'
-        },
-        {
-          id: '4',
-          title: 'Performance - Load and Response Time',
-          steps: [
-            'Execute feature with maximum allowed data volume',
-            'Monitor system response times',
-            'Verify feature performance under normal load',
-            'Check system stability during execution'
-          ],
-          expectedResult: 'Feature performs within acceptable response time limits (< 3 seconds), system remains stable under load',
-          priority: 'Medium',
-          category: 'Performance'
-        },
-        {
-          id: '5',
-          title: 'Error Handling - System Failure Recovery',
-          steps: [
-            'Simulate system interruption during feature execution',
-            'Verify error handling mechanisms activate',
-            'Check data integrity after interruption',
-            'Verify system recovery capabilities'
-          ],
-          expectedResult: 'System gracefully handles errors, data integrity is maintained, appropriate error messages are shown, recovery is possible',
-          priority: 'High',
-          category: 'Error Handling'
-        }
-      ];
+    try {
+      console.log("Generating test cases for user story:");
+      const response = await axios.post("https://distributors-duties-loans-attempts.trycloudflare.com/generate",
+        { inp_user_story: userStory },
+      );
 
-      setGeneratedTestCases(mockTestCases);
-      setIsLoading(false);
-      setHasGenerated(true);
-    }, 3000);
+      data = response.data;
+      console.log("API Response:", data);
+
+    } catch (error: any) {
+      // Axios includes better error object structure
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        console.error("Server Error:", error.response.status, error.response.data);
+        alert(`API error ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        // No response received
+        console.error("No response received:", error.request);
+        alert("No response from API");
+      } else {
+        // Something else caused the error
+        console.error("Error setting up request:", error.message);
+        alert("Unexpected error: " + error.message);
+      }
+    }
+
+    setIsLoading(false);
+    setGeneratedTestCases(data.test_cases);
+    setSimilarExamples(data.similiar);
+    setHasGenerated(true);
+
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'High': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Low': return 'bg-green-100 text-green-800 border-green-200';
+      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const copyTestCase = (testCase: TestCase) => {
-    const text = `Test Case: ${testCase.title}\n\nSteps:\n${testCase.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}\n\nExpected Result:\n${testCase.expectedResult}`;
-    navigator.clipboard.writeText(text);
-  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -298,20 +185,14 @@ const TestCaseGenerator: React.FC = () => {
                     <h4 className="text-sm font-medium text-gray-900">{testCase.title}</h4>
                     <div className="flex items-center space-x-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(testCase.priority)}`}>
-                        {testCase.priority}
+                        {testCase.priority.charAt(0).toUpperCase() + testCase.priority.slice(1)}
                       </span>
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                        {testCase.category}
+                        {testCase.category.charAt(0).toUpperCase() + testCase.category.slice(1)}
                       </span>
                     </div>
                   </div>
                   <p className="text-xs text-gray-600">{testCase.expectedResult}</p>
-                  <button
-                    onClick={() => copyTestCase(testCase)}
-                    className="mt-2 text-sm text-blue-600 hover:underline"
-                  >
-                    Copy Test Case
-                  </button>
                 </div>
               ))}
             </div>
@@ -324,36 +205,31 @@ const TestCaseGenerator: React.FC = () => {
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-semibold text-gray-700">User Story:</h3>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        <span>{example.project}</span>
-                        <span>•</span>
-                        <span>{example.date}</span>
-                      </div>
                     </div>
                     <p className="text-sm text-gray-600 italic bg-blue-50 p-3 rounded-md border border-blue-200">
-                      "{example.userStory}"
+                      "{example.user_story}"
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Generated Test Cases:</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Test Cases:</h3>
                     <div className="space-y-3">
-                      {example.testCases.map((testCase) => (
-                        <div key={testCase.id} className="bg-white p-4 rounded-md border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-medium text-gray-900">{testCase.title}</h4>
-                            <div className="flex items-center space-x-2">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(testCase.priority)}`}>
-                                {testCase.priority}
-                              </span>
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                                {testCase.category}
-                              </span>
+                      {example.test_cases.map((text, index) => {
+                        const testCase = {
+                          id: index,
+                          title: `Test Case ${index + 1}`,
+                          expectedResult: text
+                        };
+
+                        return (
+                          <div key={testCase.id} className="bg-white p-4 rounded-md border border-gray-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium text-gray-900">{testCase.title}</h4>
                             </div>
+                            <p className="text-xs text-gray-600">{testCase.expectedResult}</p>
                           </div>
-                          <p className="text-xs text-gray-600">{testCase.expectedResult}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
