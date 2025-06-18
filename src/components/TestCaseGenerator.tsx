@@ -34,8 +34,10 @@ const TestCaseGenerator: React.FC = () => {
     let data = { similiar: [], test_cases: [] };
 
     try {
+      
       console.log("Generating test cases for user story:");
-      console.log(`${process.env.NEXT_PUBLIC_API_URL}/generate`)
+      console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+      
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_URL}/generate`,
       { inp_user_story: userStory }
