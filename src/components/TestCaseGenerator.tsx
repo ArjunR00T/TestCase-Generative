@@ -44,7 +44,7 @@ const TestCaseGenerator: React.FC = () => {
 
         // --- Step 1: Request to start the background task ---
         const startResponse = await axios.post(
-            `{BaseUrl}/generate`,
+            `${BaseUrl}/generate`,
             { inp_user_story: userStory }
         );
 
@@ -65,7 +65,7 @@ const TestCaseGenerator: React.FC = () => {
         pollingIntervalId = setInterval(async () => {
             try {
                 const statusResponse = await axios.get(
-                    `{BaseUrl}/result/${taskId}`
+                    `${BaseUrl}/result/${taskId}`
                 );
                 const taskStatus = statusResponse.data;
 
