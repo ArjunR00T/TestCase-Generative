@@ -81,7 +81,7 @@ const TestCaseGenerator: React.FC = () => {
 
                     // Assume the final result is in taskStatus.result,
                     // and it contains the 'test_cases' and 'similiar' data
-                    data = taskStatus.result[0]; // Update data with final results
+                    data = taskStatus.result[0][0]; // Update data with final results
                     setGeneratedTestCases(data.test_cases || []);
                     setSimilarExamples(data.similiar || []);
                     setHasGenerated(true); // Indicate successful generation
@@ -115,7 +115,7 @@ const TestCaseGenerator: React.FC = () => {
                 setIsLoading(false); // Stop main loading indicator
                 setHasGenerated(false); // Keep hasGenerated false on failure
             }
-        }, 5000); // Poll every 5 seconds (adjust as needed, typically 2-10 seconds is fine)
+        }, 10000); // Poll every 5 seconds (adjust as needed, typically 2-10 seconds is fine)
 
     } catch (error: any) {
         // Handle errors from the initial POST request
