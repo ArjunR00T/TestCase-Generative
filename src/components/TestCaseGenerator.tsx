@@ -36,10 +36,10 @@ const TestCaseGenerator: React.FC = () => {
     try {
       
       console.log("Generating test cases for user story:");
-      console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+      // console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
       
     const response = await axios.post(
-      "https://intervention-entitled-seafood-moore.trycloudflare.com/generate",
+      "https://dc-adjustments-reach-womens.trycloudflare.com/generate",
       { inp_user_story: userStory }
     );
 
