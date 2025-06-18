@@ -81,9 +81,9 @@ const TestCaseGenerator: React.FC = () => {
 
                     // Assume the final result is in taskStatus.result,
                     // and it contains the 'test_cases' and 'similiar' data
-                    data = taskStatus.result[0][0]; // Update data with final results
-                    setGeneratedTestCases(data.test_cases || []);
-                    setSimilarExamples(data.similiar || []);
+                    data = taskStatus.result; // Update data with final results
+                    setGeneratedTestCases(data[0] || []);
+                    setSimilarExamples(data[1] || []);
                     setHasGenerated(true); // Indicate successful generation
                     setIsLoading(false); // Stop main loading indicator
 
