@@ -35,7 +35,7 @@ const TestCaseGenerator: React.FC = () => {
 
     try {
       console.log("Generating test cases for user story:");
-      const response = await axios.post("https://bride-moved-manga-pending.trycloudflare.com/generate",
+      const response = await axios.post("https://relaxation-wishing-noise-llp.trycloudflare.com/generate",
         { inp_user_story: userStory },
       );
 
