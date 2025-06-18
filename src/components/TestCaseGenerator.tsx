@@ -39,7 +39,7 @@ const TestCaseGenerator: React.FC = () => {
       // console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
       
     const response = await axios.post(
-      "https://note-riverside-repeated-me.trycloudflare.com/generate",
+      "https://scanned-liable-aaron-begun.trycloudflare.com/generate",
       { inp_user_story: userStory }
     );
 
