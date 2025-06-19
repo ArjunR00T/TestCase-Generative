@@ -18,7 +18,7 @@ interface SimilarExample {
   test_cases: TestCase[];
 }
 
-const BaseUrl = "https://lying-ourselves-careers-mild.trycloudflare.com";
+const BaseUrl = "https://pumps-hit-that-shelter.trycloudflare.com";
 
 const pollTaskStatus = (
   taskId: string,
