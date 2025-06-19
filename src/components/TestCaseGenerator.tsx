@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 // import { Loader2, CheckCircle, ChevronDown, ChevronUp, TestTube2, Copy, Download, Save } from 'lucide-react';
 import { Loader2, CheckCircle, TestTube2 } from 'lucide-react';
 import axios from 'axios';
+import { TaskProvider, useTask } from './TaskContext';
 
 interface TestCase {
   id: string;
@@ -17,8 +18,42 @@ interface SimilarExample {
   test_cases: TestCase[];
 }
 
+const BaseUrl = "https://closes-praise-sitemap-utc.trycloudflare.com";
+
+const pollTaskStatus = (
+  taskId: string,
+  onSuccess: (data: any) => void,
+  onError: (error: any) => void,
+  interval: number = 10000
+): NodeJS.Timeout => {
+  const intervalId = setInterval(async () => {
+    try {
+      const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
+      const taskStatus = statusResponse.data;
+
+      console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
+
+      if (taskStatus.status === 'done') {
+        clearInterval(intervalId);
+        onSuccess(taskStatus.result);
+      } else if (taskStatus.status === 'failed') {
+        clearInterval(intervalId);
+        onError(taskStatus.result);
+      }
+      // If pending/processing, do nothing
+    } catch (error) {
+      clearInterval(intervalId);
+      onError(error);
+    }
+  }, interval);
+
+  return intervalId; // So the caller can cancel it if needed
+};
+
 
 const TestCaseGenerator: React.FC = () => {
+
+
   const [userStory, setUserStory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [generatedTestCases, setGeneratedTestCases] = useState<TestCase[]>([]);
@@ -26,50 +61,127 @@ const TestCaseGenerator: React.FC = () => {
   // const [showSimilarExamples, setShowSimilarExamples] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState("testCases");
+  
+  useEffect(() => {
+      const fetchStatus = async () => {
+          const jobId = useTask()
+          const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
+          const taskStatus = statusResponse.data;
+           // Assuming taskStatus contains the id field
 
+          if (taskStatus.status === 'done') {
+            setGeneratedTestCases(taskStatus.result[0] || []);
+            setSimilarExamples(taskStatus.result[1] || []);
+            setHasGenerated(true);
+            setIsLoading(false);
+          } else if (taskStatus.status === 'processing') {
+            setHasGenerated(false);
+            setIsLoading(true);
+            pollTaskStatus(
+              taskStatus.id,
+              (resultData) => {
+                setGeneratedTestCases(resultData[0] || []);
+                setSimilarExamples(resultData[1] || []);
+                setHasGenerated(true);
+                setIsLoading(false);
+                console.log('Polling complete. Data:', resultData);
+              },
+              (error) => {
+                console.error("Polling error/failure:", error);
+                alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+                setHasGenerated(false);
+                setIsLoading(false);
+              }
+            );
+          } else {
+            // Still processing, you can handle this case if needed
+            console.log(`Task ${jobId} something not good`);
+          }
+      };
+  
+      fetchStatus();
+  }, []);
 
   const generateTestCases = async () => {
+    // 1. Initial Loading State for the whole process
     setIsLoading(true);
-    setHasGenerated(false);
-    let data = { similiar: [], test_cases: [] };
+    setHasGenerated(false); // Reset generated state
+    setGeneratedTestCases([]); // Clear previous results
+    setSimilarExamples([]); // Clear previous similar examples
+
+    let data:any = { similiar: [], test_cases: [] };
+    let taskId:any = null;
+    let pollingIntervalId:any = null; // To store the interval ID for clearing
 
     try {
-      
-      console.log("Generating test cases for user story:");
-      // console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-      
-    const response = await axios.post(
-      "https://spouse-cleaner-offer-lean.trycloudflare.com/generate",
-      { inp_user_story: userStory }
-    );
+        console.log("Starting test case generation for user story...");
 
-      data = response.data;
-      console.log("API Response:", data);
+        // --- Step 1: Request to start the background task ---
+        const startResponse = await axios.post(
+            `${BaseUrl}/generate`,
+            { inp_user_story: userStory }
+        );
+
+        taskId = startResponse.data.id;
+         // Extract the task_id
+        const taskContext = useTask();
+        if (taskContext) {
+            taskContext.setTaskId(taskId); // Store taskId in context
+        }
+
+        const message = startResponse.data.message;
+        console.log(message);
+        console.log("Task ID received:", taskId);
+
+        if (!taskId) {
+            throw new Error("Task ID not received from backend.");
+        }
+
+        // --- Step 2: Start Polling for Task Status ---
+        // You might want to set a different loading state here, e.g., 'isPolling'
+        // or just rely on the main isLoading to show that *something* is happening.
+
+        // Set up the polling interval
+        // Poll every 5 seconds (adjust as needed, typically 2-10 seconds is fine)
+        pollTaskStatus(
+          taskId,
+          (resultData) => {
+            setGeneratedTestCases(resultData[0] || []);
+            setSimilarExamples(resultData[1] || []);
+            setHasGenerated(true);
+            setIsLoading(false);
+            console.log('Polling complete. Data:', resultData);
+          },
+          (error) => {
+            console.error("Polling error/failure:", error);
+            alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+            setHasGenerated(false);
+            setIsLoading(false);
+          }
+        );
 
     } catch (error: any) {
-      // Axios includes better error object structure
-      if (error.response) {
-        // Server responded with a status other than 2xx
-        console.error("Server Error:", error.response.status, error.response.data);
-        alert(`API error ${error.response.status}: ${JSON.stringify(error.response.data)}`);
-      } else if (error.request) {
-        // No response received
-        console.error("No response received:", error.request);
-        alert("No response from API");
-      } else {
-        // Something else caused the error
-        console.error("Error setting up request:", error.message);
-        alert("Unexpected error: " + error.message);
-      }
+        // Handle errors from the initial POST request
+        if (pollingIntervalId) {
+            clearInterval(pollingIntervalId); // Ensure any pending polling is cleared
+        }
+        if (error.response) {
+            console.error("Initial Server Error:", error.response.status, error.response.data);
+            alert(`API error ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+            console.error("No response received for initial request:", error.request);
+            alert("No response from API");
+        } else {
+            console.error("Error setting up initial request:", error.message);
+            alert("Unexpected error: " + error.message);
+        }
+        setIsLoading(false); // Stop loading indicator on initial failure
+        setHasGenerated(false); // Keep hasGenerated false on initial failure
     }
-
-    setIsLoading(false);
-    setGeneratedTestCases(data.test_cases);
-    setSimilarExamples(data.similiar);
-    setHasGenerated(true);
-
-  };
-
+    // Note: setIsLoading(false) is now moved into the polling success/failure blocks
+    // because the main request completes quickly, but the overall process is still "loading"
+    // until the polling finishes.
+};
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-200';
