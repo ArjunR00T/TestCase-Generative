@@ -27,7 +27,7 @@ const TestCaseGenerator: React.FC = () => {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState("testCases");
 
-  const BaseUrl = "https://explain-watt-starring-copying.trycloudflare.com";
+  const BaseUrl = "https://closes-praise-sitemap-utc.trycloudflare.com";
   const generateTestCases = async () => {
     // 1. Initial Loading State for the whole process
     setIsLoading(true);
