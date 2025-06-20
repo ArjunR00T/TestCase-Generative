@@ -14,7 +14,7 @@ interface TestCase {
 }
 
 let cnt:number = 0
-const BaseUrl = "https://pumps-hit-that-shelter.trycloudflare.com";
+const BaseUrl = "https://port-investment-allocation-organisations.trycloudflare.com";
 
 interface SimilarExample {
   user_story: string;
