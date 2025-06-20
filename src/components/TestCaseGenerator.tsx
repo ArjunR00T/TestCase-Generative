@@ -18,8 +18,12 @@ interface SimilarExample {
   test_cases: TestCase[];
 }
 
+<<<<<<< HEAD
 let cnt:number = 0
 const BaseUrl = "https://closes-praise-sitemap-utc.trycloudflare.com";
+=======
+const BaseUrl = "https://pumps-hit-that-shelter.trycloudflare.com";
+>>>>>>> 731aec237ba64322b643de9233661db6f02003b4
 
 const pollTaskStatus = (
   taskId: string,
