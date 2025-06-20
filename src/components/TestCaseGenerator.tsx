@@ -18,21 +18,59 @@ interface SimilarExample {
   test_cases: TestCase[];
 }
 
+let cnt:number = 0
 const BaseUrl = "https://closes-praise-sitemap-utc.trycloudflare.com";
 
 const pollTaskStatus = (
   taskId: string,
   onSuccess: (data: any) => void,
   onError: (error: any) => void,
-  interval: number = 10000
+  interval: number = 6000
 ): NodeJS.Timeout => {
   const intervalId = setInterval(async () => {
+    console.log("Count:"+cnt)
     try {
-      const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
+      // const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
+      const statusResponse = {
+        data: {
+          id: "taskId",
+          status: 'processing', // Simulating a completed task for demonstration
+          result: [
+            [
+              {
+                id: '1',
+                title: 'Test Case 1',
+                steps: ['Step 1', 'Step 2'],
+                expectedResult: 'Expected Result 1',
+                priority: 'High',
+                category: 'Functional'
+              }
+            ],
+            [
+              {
+                user_story: 'As a user, I want to log in.',
+                test_cases: [
+                  {
+                    id: '1',
+                    title: 'Login Test Case',
+                    steps: ['Go to login page', 'Enter credentials'],
+                    expectedResult: 'User logged in successfully',
+                    priority: 'Critical',
+                    category: 'Authentication'
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      }
+
       const taskStatus = statusResponse.data;
-
       console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
-
+      cnt += 1;
+      if (cnt == 5){
+        taskStatus.status = "done"
+      }
       if (taskStatus.status === 'done') {
         clearInterval(intervalId);
         onSuccess(taskStatus.result);
@@ -40,6 +78,7 @@ const pollTaskStatus = (
         clearInterval(intervalId);
         onError(taskStatus.result);
       }
+      
       // If pending/processing, do nothing
     } catch (error) {
       clearInterval(intervalId);
@@ -52,6 +91,7 @@ const pollTaskStatus = (
 
 
 const TestCaseGenerator: React.FC = () => {
+  const taskContext = useTask();
 
 
   const [userStory, setUserStory] = useState('');
@@ -63,44 +103,81 @@ const TestCaseGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState("testCases");
   
   useEffect(() => {
-      const fetchStatus = async () => {
-          const jobId = useTask()
-          const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
-          const taskStatus = statusResponse.data;
-           // Assuming taskStatus contains the id field
-
-          if (taskStatus.status === 'done') {
-            setGeneratedTestCases(taskStatus.result[0] || []);
-            setSimilarExamples(taskStatus.result[1] || []);
-            setHasGenerated(true);
-            setIsLoading(false);
-          } else if (taskStatus.status === 'processing') {
-            setHasGenerated(false);
-            setIsLoading(true);
-            pollTaskStatus(
-              taskStatus.id,
-              (resultData) => {
-                setGeneratedTestCases(resultData[0] || []);
-                setSimilarExamples(resultData[1] || []);
-                setHasGenerated(true);
-                setIsLoading(false);
-                console.log('Polling complete. Data:', resultData);
-              },
-              (error) => {
-                console.error("Polling error/failure:", error);
-                alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
-                setHasGenerated(false);
-                setIsLoading(false);
+    console.log("Starting useEffect fetch");
+    const fetchStatus = async () => {
+      const jobId = taskContext?.taskId;
+      if (!jobId) return;
+  
+      // Simulate API call
+      const statusResponse = {
+        data: {
+          id: "taskId",
+          status: 'processing',
+          result: [
+            [
+              {
+                id: '1',
+                title: 'Test Case 1',
+                steps: ['Step 1', 'Step 2'],
+                expectedResult: 'Expected Result 1',
+                priority: 'High',
+                category: 'Functional'
               }
-            );
-          } else {
-            // Still processing, you can handle this case if needed
-            console.log(`Task ${jobId} something not good`);
-          }
+            ],
+            [
+              {
+                user_story: 'As a user, I want to log in.',
+                test_cases: [
+                  {
+                    id: '1',
+                    title: 'Login Test Case',
+                    steps: ['Go to login page', 'Enter credentials'],
+                    expectedResult: 'User logged in successfully',
+                    priority: 'Critical',
+                    category: 'Authentication'
+                  }
+                ]
+              }
+            ]
+          ]
+        }
       };
   
-      fetchStatus();
-  }, []);
+      const taskStatus = statusResponse.data;
+      console.log("Inital fetched status: "+taskStatus.status);
+  
+      if (taskStatus.status === 'done') {
+        setGeneratedTestCases(taskStatus.result[0] || []);
+        setSimilarExamples(taskStatus.result[1] || []);
+        setHasGenerated(true);
+        setIsLoading(false);
+      } else if (taskStatus.status === 'processing') {
+        setHasGenerated(false);
+        setIsLoading(true);
+        pollTaskStatus(
+          taskStatus.id,
+          (resultData) => {
+            setGeneratedTestCases(resultData[0] || []);
+            setSimilarExamples(resultData[1] || []);
+            setHasGenerated(true);
+            setIsLoading(false);
+            console.log('Polling complete. Data:', resultData);
+          },
+          (error) => {
+            console.error("Polling error/failure:", error);
+            alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+            setHasGenerated(false);
+            setIsLoading(false);
+          }
+        );
+      } else {
+        console.log(`Task ${jobId} status not recognized`);
+      }
+    };
+  
+    fetchStatus();
+  }, [taskContext?.taskId]);
+  
 
   const generateTestCases = async () => {
     // 1. Initial Loading State for the whole process
@@ -117,14 +194,21 @@ const TestCaseGenerator: React.FC = () => {
         console.log("Starting test case generation for user story...");
 
         // --- Step 1: Request to start the background task ---
-        const startResponse = await axios.post(
-            `${BaseUrl}/generate`,
-            { inp_user_story: userStory }
-        );
+        // const startResponse = await axios.post(
+        //     `${BaseUrl}/generate`,
+        //     { inp_user_story: userStory }
+        // );
+
+        const startResponse = {
+          data: {
+            id: "taskId",
+            message: "Task started successfully"
+          }
+        }
 
         taskId = startResponse.data.id;
          // Extract the task_id
-        const taskContext = useTask();
+        
         if (taskContext) {
             taskContext.setTaskId(taskId); // Store taskId in context
         }
