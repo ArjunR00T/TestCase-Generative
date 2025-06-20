@@ -13,18 +13,13 @@ interface TestCase {
   category: string;
 }
 
+let cnt:number = 0
+const BaseUrl = "https://pumps-hit-that-shelter.trycloudflare.com";
+
 interface SimilarExample {
   user_story: string;
   test_cases: TestCase[];
 }
-
-<<<<<<< HEAD
-let cnt:number = 0
-const BaseUrl = "https://closes-praise-sitemap-utc.trycloudflare.com";
-=======
-const BaseUrl = "https://pumps-hit-that-shelter.trycloudflare.com";
->>>>>>> 731aec237ba64322b643de9233661db6f02003b4
-
 const pollTaskStatus = (
   taskId: string,
   onSuccess: (data: any) => void,
@@ -34,47 +29,47 @@ const pollTaskStatus = (
   const intervalId = setInterval(async () => {
     console.log("Count:"+cnt)
     try {
-      // const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
-      const statusResponse = {
-        data: {
-          id: "taskId",
-          status: 'processing', // Simulating a completed task for demonstration
-          result: [
-            [
-              {
-                id: '1',
-                title: 'Test Case 1',
-                steps: ['Step 1', 'Step 2'],
-                expectedResult: 'Expected Result 1',
-                priority: 'High',
-                category: 'Functional'
-              }
-            ],
-            [
-              {
-                user_story: 'As a user, I want to log in.',
-                test_cases: [
-                  {
-                    id: '1',
-                    title: 'Login Test Case',
-                    steps: ['Go to login page', 'Enter credentials'],
-                    expectedResult: 'User logged in successfully',
-                    priority: 'Critical',
-                    category: 'Authentication'
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      }
+      const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
+      // const statusResponse = {
+      //   data: {
+      //     id: "taskId",
+      //     status: 'processing', // Simulating a completed task for demonstration
+      //     result: [
+      //       [
+      //         {
+      //           id: '1',
+      //           title: 'Test Case 1',
+      //           steps: ['Step 1', 'Step 2'],
+      //           expectedResult: 'Expected Result 1',
+      //           priority: 'High',
+      //           category: 'Functional'
+      //         }
+      //       ],
+      //       [
+      //         {
+      //           user_story: 'As a user, I want to log in.',
+      //           test_cases: [
+      //             {
+      //               id: '1',
+      //               title: 'Login Test Case',
+      //               steps: ['Go to login page', 'Enter credentials'],
+      //               expectedResult: 'User logged in successfully',
+      //               priority: 'Critical',
+      //               category: 'Authentication'
+      //             }
+      //           ]
+      //         }
+      //       ]
+      //     ]
+      //   }
+      // }
 
       const taskStatus = statusResponse.data;
       console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
-      cnt += 1;
-      if (cnt == 5){
-        taskStatus.status = "done"
-      }
+      // cnt += 1;
+      // if (cnt == 5){
+      //   taskStatus.status = "done"
+      // }
       if (taskStatus.status === 'done') {
         clearInterval(intervalId);
         onSuccess(taskStatus.result);
@@ -111,41 +106,42 @@ const TestCaseGenerator: React.FC = () => {
     const fetchStatus = async () => {
       const jobId = taskContext?.taskId;
       if (!jobId) return;
-  
+      
+       const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
       // Simulate API call
-      const statusResponse = {
-        data: {
-          id: "taskId",
-          status: 'processing',
-          result: [
-            [
-              {
-                id: '1',
-                title: 'Test Case 1',
-                steps: ['Step 1', 'Step 2'],
-                expectedResult: 'Expected Result 1',
-                priority: 'High',
-                category: 'Functional'
-              }
-            ],
-            [
-              {
-                user_story: 'As a user, I want to log in.',
-                test_cases: [
-                  {
-                    id: '1',
-                    title: 'Login Test Case',
-                    steps: ['Go to login page', 'Enter credentials'],
-                    expectedResult: 'User logged in successfully',
-                    priority: 'Critical',
-                    category: 'Authentication'
-                  }
-                ]
-              }
-            ]
-          ]
-        }
-      };
+      // const statusResponse = {
+      //   data: {
+      //     id: "taskId",
+      //     status: 'processing',
+      //     result: [
+      //       [
+      //         {
+      //           id: '1',
+      //           title: 'Test Case 1',
+      //           steps: ['Step 1', 'Step 2'],
+      //           expectedResult: 'Expected Result 1',
+      //           priority: 'High',
+      //           category: 'Functional'
+      //         }
+      //       ],
+      //       [
+      //         {
+      //           user_story: 'As a user, I want to log in.',
+      //           test_cases: [
+      //             {
+      //               id: '1',
+      //               title: 'Login Test Case',
+      //               steps: ['Go to login page', 'Enter credentials'],
+      //               expectedResult: 'User logged in successfully',
+      //               priority: 'Critical',
+      //               category: 'Authentication'
+      //             }
+      //           ]
+      //         }
+      //       ]
+      //     ]
+      //   }
+      // };
   
       const taskStatus = statusResponse.data;
       console.log("Inital fetched status: "+taskStatus.status);
@@ -198,17 +194,17 @@ const TestCaseGenerator: React.FC = () => {
         console.log("Starting test case generation for user story...");
 
         // --- Step 1: Request to start the background task ---
-        // const startResponse = await axios.post(
-        //     `${BaseUrl}/generate`,
-        //     { inp_user_story: userStory }
-        // );
+        const startResponse = await axios.post(
+            `${BaseUrl}/generate`,
+            { inp_user_story: userStory }
+        );
 
-        const startResponse = {
-          data: {
-            id: "taskId",
-            message: "Task started successfully"
-          }
-        }
+        // const startResponse = {
+        //   data: {
+        //     id: "taskId",
+        //     message: "Task started successfully"
+        //   }
+        // }
 
         taskId = startResponse.data.id;
          // Extract the task_id
