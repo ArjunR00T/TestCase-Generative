@@ -28,7 +28,12 @@ const pollTaskStatus = (
 ): NodeJS.Timeout => {
   const intervalId = setInterval(async () => {
     console.log("Count:"+cnt)
+
+    
     try {
+      if (taskId === null || taskId === undefined) {
+        return;
+      }
       const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
       // const statusResponse = {
       //   data: {
