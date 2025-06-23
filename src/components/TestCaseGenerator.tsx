@@ -437,7 +437,7 @@ interface TestCase {
   category: string;
 }
 
-const BaseUrl = "https://featuring-refer-tight-testing.trycloudflare.com";
+const BaseUrl = "https://supporting-thousands-planned-mrs.trycloudflare.com";
 
 interface SimilarExample {
   user_story: string;
