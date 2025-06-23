@@ -14,84 +14,12 @@ interface TestCase {
 }
 
 let cnt:number = 0
-const BaseUrl = "https://port-investment-allocation-organisations.trycloudflare.com";
+const BaseUrl = "https://featuring-refer-tight-testing.trycloudflare.com";
 
 interface SimilarExample {
   user_story: string;
   test_cases: TestCase[];
 }
-const pollTaskStatus = (
-  taskId: string,
-  onSuccess: (data: any) => void,
-  onError: (error: any) => void,
-  interval: number = 6000
-): NodeJS.Timeout => {
-  const intervalId = setInterval(async () => {
-    console.log("Count:"+cnt)
-
-    
-    try {
-      if (taskId === null || taskId === undefined) {
-        return;
-      }
-      const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
-      // const statusResponse = {
-      //   data: {
-      //     id: "taskId",
-      //     status: 'processing', // Simulating a completed task for demonstration
-      //     result: [
-      //       [
-      //         {
-      //           id: '1',
-      //           title: 'Test Case 1',
-      //           steps: ['Step 1', 'Step 2'],
-      //           expectedResult: 'Expected Result 1',
-      //           priority: 'High',
-      //           category: 'Functional'
-      //         }
-      //       ],
-      //       [
-      //         {
-      //           user_story: 'As a user, I want to log in.',
-      //           test_cases: [
-      //             {
-      //               id: '1',
-      //               title: 'Login Test Case',
-      //               steps: ['Go to login page', 'Enter credentials'],
-      //               expectedResult: 'User logged in successfully',
-      //               priority: 'Critical',
-      //               category: 'Authentication'
-      //             }
-      //           ]
-      //         }
-      //       ]
-      //     ]
-      //   }
-      // }
-
-      const taskStatus = statusResponse.data;
-      console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
-      // cnt += 1;
-      // if (cnt == 5){
-      //   taskStatus.status = "done"
-      // }
-      if (taskStatus.status === 'done') {
-        clearInterval(intervalId);
-        onSuccess(taskStatus.result);
-      } else if (taskStatus.status === 'failed') {
-        clearInterval(intervalId);
-        onError(taskStatus.result);
-      }
-      
-      // If pending/processing, do nothing
-    } catch (error) {
-      clearInterval(intervalId);
-      onError(error);
-    }
-  }, interval);
-
-  return intervalId; // So the caller can cancel it if needed
-};
 
 
 const TestCaseGenerator: React.FC = () => {
@@ -106,6 +34,51 @@ const TestCaseGenerator: React.FC = () => {
   const [hasGenerated, setHasGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState("testCases");
   
+  const pollTaskStatus = (
+    taskId: string,
+    onSuccess: (data: any) => void,
+    onError: (error: any) => void,
+    interval: number = 6000
+  ): NodeJS.Timeout => {
+    const intervalId = setInterval(async () => {
+      console.log("Count:"+cnt)
+  
+      
+      try {
+        if (taskId === null || taskId === undefined) {
+          return;
+        }
+        const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
+      
+        const taskStatus = statusResponse.data;
+        console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
+        // cnt += 1;
+        // if (cnt == 5){
+        //   taskStatus.status = "done"
+        // }
+        if (taskStatus.status === 'done') {
+          clearInterval(intervalId);
+          onSuccess(taskStatus.result);
+          const resultData = taskStatus.result;
+          setGeneratedTestCases(resultData[0] || []);
+          setSimilarExamples(resultData[1] || []);
+          setHasGenerated(true);
+          setIsLoading(false);
+        } else if (taskStatus.status === 'failed') {
+          clearInterval(intervalId);
+          onError(taskStatus.result);
+        }
+        
+        // If pending/processing, do nothing
+      } catch (error) {
+        clearInterval(intervalId);
+        onError(error);
+      }
+    }, interval);
+  
+    return intervalId; // So the caller can cancel it if needed
+  };
+  
   useEffect(() => {
     console.log("Starting useEffect fetch");
     const fetchStatus = async () => {
@@ -113,41 +86,7 @@ const TestCaseGenerator: React.FC = () => {
       if (!jobId) return;
       
        const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
-      // Simulate API call
-      // const statusResponse = {
-      //   data: {
-      //     id: "taskId",
-      //     status: 'processing',
-      //     result: [
-      //       [
-      //         {
-      //           id: '1',
-      //           title: 'Test Case 1',
-      //           steps: ['Step 1', 'Step 2'],
-      //           expectedResult: 'Expected Result 1',
-      //           priority: 'High',
-      //           category: 'Functional'
-      //         }
-      //       ],
-      //       [
-      //         {
-      //           user_story: 'As a user, I want to log in.',
-      //           test_cases: [
-      //             {
-      //               id: '1',
-      //               title: 'Login Test Case',
-      //               steps: ['Go to login page', 'Enter credentials'],
-      //               expectedResult: 'User logged in successfully',
-      //               priority: 'Critical',
-      //               category: 'Authentication'
-      //             }
-      //           ]
-      //         }
-      //       ]
-      //     ]
-      //   }
-      // };
-  
+    
       const taskStatus = statusResponse.data;
       console.log("Inital fetched status: "+taskStatus.status);
   
