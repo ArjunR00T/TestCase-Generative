@@ -41,98 +41,85 @@ const TestCaseGenerator: React.FC = () => {
     interval: number = 6000
   ): NodeJS.Timeout => {
     const intervalId = setInterval(async () => {
-      console.log("Count:"+cnt)
-  
-      
       try {
-        if (taskId === null || taskId === undefined) {
-          return;
-        }
+        if (!taskId) return;
         const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
-      
         const taskStatus = statusResponse.data;
-        console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
-        
+
+        console.log(`📡 Polling... Status: ${taskStatus.status}`);
+
         if (taskStatus.status === 'done') {
           clearInterval(intervalId);
           onSuccess(taskStatus.result);
-          const resultData = taskStatus.result;
-          setGeneratedTestCases(resultData[0] || []);
-          setSimilarExamples(resultData[1] || []);
-          setHasGenerated(true);
-          setIsLoading(false);
         } else if (taskStatus.status === 'failed') {
           clearInterval(intervalId);
           onError(taskStatus.result);
         }
-        
-        // If pending/processing, do nothing
       } catch (error) {
         clearInterval(intervalId);
         onError(error);
       }
     }, interval);
-  
-    return intervalId; // So the caller can cancel it if needed
+
+    return intervalId;
   };
   
   useEffect(() => {
     let isMounted = true;
     let intervalId: NodeJS.Timeout;
-  
+
     const fetchStatus = async () => {
       const jobId = taskContext?.taskId;
       if (!jobId) return;
-  
+
       try {
         const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
         const taskStatus = statusResponse.data;
-  
-        console.log("Initial fetched status: " + taskStatus.status);
-  
+        console.log("🧠 Initial status:", taskStatus.status);
+
         if (!isMounted) return;
-  
-        if (taskStatus.status === 'done') {
-          setGeneratedTestCases(taskStatus.result[0] || []);
-          setSimilarExamples(taskStatus.result[1] || []);
+
+        const handleSuccess = (resultData: any) => {
+          if (!isMounted) return;
+
+          console.log("✅ Polling completed with result:", resultData);
+          setGeneratedTestCases(resultData[0] || []);
+          setSimilarExamples(resultData[1] || []);
           setHasGenerated(true);
           setIsLoading(false);
+          // forceUpdate(); // Just in case UI isn't refreshing
+        };
+
+        const handleError = (error: any) => {
+          if (!isMounted) return;
+
+          console.error("❌ Polling failed:", error);
+          alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+          setHasGenerated(false);
+          setIsLoading(false);
+        };
+
+        if (taskStatus.status === 'done') {
+          handleSuccess(taskStatus.result);
         } else if (taskStatus.status === 'processing') {
           setHasGenerated(false);
           setIsLoading(true);
-  
-          intervalId = pollTaskStatus(
-            taskStatus.id,
-            (resultData) => {
-              if (!isMounted) return;
-              setGeneratedTestCases(resultData[0] || []);
-              setSimilarExamples(resultData[1] || []);
-              setHasGenerated(true);
-              setIsLoading(false);
-              console.log('Polling complete. Data:', resultData);
-            },
-            (error) => {
-              if (!isMounted) return;
-              console.error("Polling error/failure:", error);
-              alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
-              setHasGenerated(false);
-              setIsLoading(false);
-            }
-          );
+          intervalId = pollTaskStatus(taskStatus.id, handleSuccess, handleError);
+        } else {
+          console.warn(`⚠️ Unrecognized status: ${taskStatus.status}`);
         }
       } catch (err) {
-        console.error("Initial fetch failed", err);
+        console.error("💥 Failed to fetch status:", err);
       }
     };
-  
+
     fetchStatus();
-  
+
     return () => {
       isMounted = false;
       if (intervalId) clearInterval(intervalId);
     };
   }, [taskContext?.taskId]);
-  
   
 
   const generateTestCases = async () => {
