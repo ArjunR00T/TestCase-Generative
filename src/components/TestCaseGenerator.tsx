@@ -33,6 +33,8 @@ const TestCaseGenerator: React.FC = () => {
   // const [showSimilarExamples, setShowSimilarExamples] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState("testCases");
+  const [forceRender, setForceRender] = useState(Date.now());
+
   
   const pollTaskStatus = (
     taskId: string,
@@ -51,6 +53,8 @@ const TestCaseGenerator: React.FC = () => {
         if (taskStatus.status === 'done') {
           clearInterval(intervalId);
           onSuccess(taskStatus.result);
+          setForceRender(Date.now());
+
         } else if (taskStatus.status === 'failed') {
           clearInterval(intervalId);
           onError(taskStatus.result);
@@ -236,7 +240,7 @@ const TestCaseGenerator: React.FC = () => {
       {/* Main Input Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <label htmlFor="userStory" className="block text-sm font-semibold text-gray-700 mb-3">
-          User Story Input
+          User Story Input test
         </label>
         <textarea
           id="userStory"
