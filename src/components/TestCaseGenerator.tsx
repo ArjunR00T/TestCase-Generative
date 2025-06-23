@@ -52,10 +52,7 @@ const TestCaseGenerator: React.FC = () => {
       
         const taskStatus = statusResponse.data;
         console.log(`Task ${taskId} Status: ${taskStatus.status}, Result: ${taskStatus.result}%`);
-        // cnt += 1;
-        // if (cnt == 5){
-        //   taskStatus.status = "done"
-        // }
+        
         if (taskStatus.status === 'done') {
           clearInterval(intervalId);
           onSuccess(taskStatus.result);
@@ -80,47 +77,62 @@ const TestCaseGenerator: React.FC = () => {
   };
   
   useEffect(() => {
-    console.log("Starting useEffect fetch");
+    let isMounted = true;
+    let intervalId: NodeJS.Timeout;
+  
     const fetchStatus = async () => {
       const jobId = taskContext?.taskId;
       if (!jobId) return;
-      
-       const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
-    
-      const taskStatus = statusResponse.data;
-      console.log("Inital fetched status: "+taskStatus.status);
   
-      if (taskStatus.status === 'done') {
-        setGeneratedTestCases(taskStatus.result[0] || []);
-        setSimilarExamples(taskStatus.result[1] || []);
-        setHasGenerated(true);
-        setIsLoading(false);
-      } else if (taskStatus.status === 'processing') {
-        setHasGenerated(false);
-        setIsLoading(true);
-        pollTaskStatus(
-          taskStatus.id,
-          (resultData) => {
-            setGeneratedTestCases(resultData[0] || []);
-            setSimilarExamples(resultData[1] || []);
-            setHasGenerated(true);
-            setIsLoading(false);
-            console.log('Polling complete. Data:', resultData);
-          },
-          (error) => {
-            console.error("Polling error/failure:", error);
-            alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
-            setHasGenerated(false);
-            setIsLoading(false);
-          }
-        );
-      } else {
-        console.log(`Task ${jobId} status not recognized`);
+      try {
+        const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
+        const taskStatus = statusResponse.data;
+  
+        console.log("Initial fetched status: " + taskStatus.status);
+  
+        if (!isMounted) return;
+  
+        if (taskStatus.status === 'done') {
+          setGeneratedTestCases(taskStatus.result[0] || []);
+          setSimilarExamples(taskStatus.result[1] || []);
+          setHasGenerated(true);
+          setIsLoading(false);
+        } else if (taskStatus.status === 'processing') {
+          setHasGenerated(false);
+          setIsLoading(true);
+  
+          intervalId = pollTaskStatus(
+            taskStatus.id,
+            (resultData) => {
+              if (!isMounted) return;
+              setGeneratedTestCases(resultData[0] || []);
+              setSimilarExamples(resultData[1] || []);
+              setHasGenerated(true);
+              setIsLoading(false);
+              console.log('Polling complete. Data:', resultData);
+            },
+            (error) => {
+              if (!isMounted) return;
+              console.error("Polling error/failure:", error);
+              alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+              setHasGenerated(false);
+              setIsLoading(false);
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Initial fetch failed", err);
       }
     };
   
     fetchStatus();
+  
+    return () => {
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [taskContext?.taskId]);
+  
   
 
   const generateTestCases = async () => {
