@@ -43,77 +43,93 @@ const TestCaseGenerator: React.FC = () => {
     onSuccess: (data: any) => void,
     onError: (error: any) => void,
     interval: number = 6000
-  ): void => {
-    if (pollingRef.current) {
-      console.log("🔁 Clearing old polling interval before starting a new one");
-      clearInterval(pollingRef.current);
-    }
-  
-    pollingRef.current = setInterval(async () => {
+  ): NodeJS.Timeout => {
+    const intervalId = setInterval(async () => {
       try {
         if (!taskId) return;
         const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
         const taskStatus = statusResponse.data;
-  
-        console.log(`📡 Polling Task ${taskId}... Status: ${taskStatus.status}`);
-  
+
+        console.log(`📡 Polling... Status: ${taskStatus.status}`);
+
         if (taskStatus.status === 'done') {
-          clearInterval(pollingRef.current!);
-          pollingRef.current = null;
-          if (isMountedRef.current) onSuccess(taskStatus.result);
+          clearInterval(intervalId);
+          onSuccess(taskStatus.result);
+          setForceRender(Date.now());
+
         } else if (taskStatus.status === 'failed') {
-          clearInterval(pollingRef.current!);
-          pollingRef.current = null;
-          if (isMountedRef.current) onError(taskStatus.result);
+          clearInterval(intervalId);
+          onError(taskStatus.result);
         }
       } catch (error) {
-        clearInterval(pollingRef.current!);
-        pollingRef.current = null;
-        if (isMountedRef.current) onError(error);
+        clearInterval(intervalId);
+        onError(error);
       }
     }, interval);
+
+    return intervalId;
   };
   
-  
   useEffect(() => {
+    let isMounted = true;
+    let intervalId: NodeJS.Timeout;
+
     const fetchStatus = async () => {
       const jobId = taskContext?.taskId;
       if (!jobId) return;
-  
+
       try {
         const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
         const taskStatus = statusResponse.data;
-        console.log("📦 Fetched status from useEffect:", taskStatus.status);
-  
+        console.log("🧠 Initial status:", taskStatus.status);
+
+        if (!isMounted) return;
+
         const handleSuccess = (resultData: any) => {
-          console.log("✅ [useEffect] Polling complete");
+          if (!isMounted) return;
+
+          console.log("✅ Polling completed with result:", resultData);
           setGeneratedTestCases(resultData[0] || []);
           setSimilarExamples(resultData[1] || []);
           setHasGenerated(true);
           setIsLoading(false);
+          // forceUpdate(); // Just in case UI isn't refreshing
         };
-  
+
         const handleError = (error: any) => {
-          console.error("❌ [useEffect] Polling error", error);
+          if (!isMounted) return;
+
+          console.error("❌ Polling failed:", error);
+          alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
           setHasGenerated(false);
           setIsLoading(false);
         };
-  
+
         if (taskStatus.status === 'done') {
           handleSuccess(taskStatus.result);
         } else if (taskStatus.status === 'processing') {
           setHasGenerated(false);
           setIsLoading(true);
-          pollTaskStatus(taskStatus.id, handleSuccess, handleError);
+          intervalId = pollTaskStatus(taskStatus.id, handleSuccess, handleError);
+        } else {
+          console.warn(`⚠️ Unrecognized status: ${taskStatus.status}`);
         }
       } catch (err) {
-        console.error("💥 Failed initial status check:", err);
+        console.error("💥 Failed to fetch status:", err);
       }
     };
-  
+
     fetchStatus();
+
+    return () => {
+      isMountedRef.current = false;
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        console.log("🧹 Interval cleared on unmount");
+      }
+    };
   }, [taskContext?.taskId]);
-  
   
 
   const generateTestCases = async () => {
@@ -164,22 +180,22 @@ const TestCaseGenerator: React.FC = () => {
 
         // Set up the polling interval
         // Poll every 5 seconds (adjust as needed, typically 2-10 seconds is fine)
-        const handleSuccess = (resultData: any) => {
-          console.log("✅ [generateTestCases] Polling complete");
-          setGeneratedTestCases(resultData[0] || []);
-          setSimilarExamples(resultData[1] || []);
-          setHasGenerated(true);
-          setIsLoading(false);
-        };
-    
-        const handleError = (error: any) => {
-          console.error("❌ [generateTestCases] Polling error", error);
-          setHasGenerated(false);
-          setIsLoading(false);
-        };
-    
-        // Start polling for result
-        pollTaskStatus(taskId, handleSuccess, handleError);
+        pollTaskStatus(
+          taskId,
+          (resultData) => {
+            setGeneratedTestCases(resultData[0] || []);
+            setSimilarExamples(resultData[1] || []);
+            setHasGenerated(true);
+            setIsLoading(false);
+            console.log('Polling complete. Data:', resultData);
+          },
+          (error) => {
+            console.error("Polling error/failure:", error);
+            alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+            setHasGenerated(false);
+            setIsLoading(false);
+          }
+        );
 
     } catch (error: any) {
         // Handle errors from the initial POST request
