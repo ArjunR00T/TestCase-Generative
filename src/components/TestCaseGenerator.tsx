@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 // import { Loader2, CheckCircle, ChevronDown, ChevronUp, TestTube2, Copy, Download, Save } from 'lucide-react';
 import { Loader2, CheckCircle, TestTube2 } from 'lucide-react';
 import axios from 'axios';
@@ -25,7 +25,9 @@ interface SimilarExample {
 const TestCaseGenerator: React.FC = () => {
   const taskContext = useTask();
 
-
+  const pollingRef = useRef<NodeJS.Timeout | null>(null); // ⬅️ Stores current poll interval
+  const isMountedRef = useRef(true);                      // ⬅️ Tracks component mount
+  
   const [userStory, setUserStory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [generatedTestCases, setGeneratedTestCases] = useState<TestCase[]>([]);
@@ -41,89 +43,77 @@ const TestCaseGenerator: React.FC = () => {
     onSuccess: (data: any) => void,
     onError: (error: any) => void,
     interval: number = 6000
-  ): NodeJS.Timeout => {
-    const intervalId = setInterval(async () => {
+  ): void => {
+    if (pollingRef.current) {
+      console.log("🔁 Clearing old polling interval before starting a new one");
+      clearInterval(pollingRef.current);
+    }
+  
+    pollingRef.current = setInterval(async () => {
       try {
         if (!taskId) return;
         const statusResponse = await axios.get(`${BaseUrl}/result/${taskId}`);
         const taskStatus = statusResponse.data;
-
-        console.log(`📡 Polling... Status: ${taskStatus.status}`);
-
+  
+        console.log(`📡 Polling Task ${taskId}... Status: ${taskStatus.status}`);
+  
         if (taskStatus.status === 'done') {
-          clearInterval(intervalId);
-          onSuccess(taskStatus.result);
-          setForceRender(Date.now());
-
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          if (isMountedRef.current) onSuccess(taskStatus.result);
         } else if (taskStatus.status === 'failed') {
-          clearInterval(intervalId);
-          onError(taskStatus.result);
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          if (isMountedRef.current) onError(taskStatus.result);
         }
       } catch (error) {
-        clearInterval(intervalId);
-        onError(error);
+        clearInterval(pollingRef.current!);
+        pollingRef.current = null;
+        if (isMountedRef.current) onError(error);
       }
     }, interval);
-
-    return intervalId;
   };
   
+  
   useEffect(() => {
-    let isMounted = true;
-    let intervalId: NodeJS.Timeout;
-
     const fetchStatus = async () => {
       const jobId = taskContext?.taskId;
       if (!jobId) return;
-
+  
       try {
         const statusResponse = await axios.get(`${BaseUrl}/result/${jobId}`);
         const taskStatus = statusResponse.data;
-        console.log("🧠 Initial status:", taskStatus.status);
-
-        if (!isMounted) return;
-
+        console.log("📦 Fetched status from useEffect:", taskStatus.status);
+  
         const handleSuccess = (resultData: any) => {
-          if (!isMounted) return;
-
-          console.log("✅ Polling completed with result:", resultData);
+          console.log("✅ [useEffect] Polling complete");
           setGeneratedTestCases(resultData[0] || []);
           setSimilarExamples(resultData[1] || []);
           setHasGenerated(true);
           setIsLoading(false);
-          // forceUpdate(); // Just in case UI isn't refreshing
         };
-
+  
         const handleError = (error: any) => {
-          if (!isMounted) return;
-
-          console.error("❌ Polling failed:", error);
-          alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
+          console.error("❌ [useEffect] Polling error", error);
           setHasGenerated(false);
           setIsLoading(false);
         };
-
+  
         if (taskStatus.status === 'done') {
           handleSuccess(taskStatus.result);
         } else if (taskStatus.status === 'processing') {
           setHasGenerated(false);
           setIsLoading(true);
-          intervalId = pollTaskStatus(taskStatus.id, handleSuccess, handleError);
-        } else {
-          console.warn(`⚠️ Unrecognized status: ${taskStatus.status}`);
+          pollTaskStatus(taskStatus.id, handleSuccess, handleError);
         }
       } catch (err) {
-        console.error("💥 Failed to fetch status:", err);
+        console.error("💥 Failed initial status check:", err);
       }
     };
-
+  
     fetchStatus();
-
-    return () => {
-      isMounted = false;
-      if (intervalId) clearInterval(intervalId);
-    };
   }, [taskContext?.taskId]);
+  
   
 
   const generateTestCases = async () => {
@@ -174,22 +164,22 @@ const TestCaseGenerator: React.FC = () => {
 
         // Set up the polling interval
         // Poll every 5 seconds (adjust as needed, typically 2-10 seconds is fine)
-        pollTaskStatus(
-          taskId,
-          (resultData) => {
-            setGeneratedTestCases(resultData[0] || []);
-            setSimilarExamples(resultData[1] || []);
-            setHasGenerated(true);
-            setIsLoading(false);
-            console.log('Polling complete. Data:', resultData);
-          },
-          (error) => {
-            console.error("Polling error/failure:", error);
-            alert(`Task failed: ${typeof error === 'string' ? error : JSON.stringify(error)}`);
-            setHasGenerated(false);
-            setIsLoading(false);
-          }
-        );
+        const handleSuccess = (resultData: any) => {
+          console.log("✅ [generateTestCases] Polling complete");
+          setGeneratedTestCases(resultData[0] || []);
+          setSimilarExamples(resultData[1] || []);
+          setHasGenerated(true);
+          setIsLoading(false);
+        };
+    
+        const handleError = (error: any) => {
+          console.error("❌ [generateTestCases] Polling error", error);
+          setHasGenerated(false);
+          setIsLoading(false);
+        };
+    
+        // Start polling for result
+        pollTaskStatus(taskId, handleSuccess, handleError);
 
     } catch (error: any) {
         // Handle errors from the initial POST request
