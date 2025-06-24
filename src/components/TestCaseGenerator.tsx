@@ -437,7 +437,7 @@ interface TestCase {
   category: string;
 }
 
-const BaseUrl = "https://supporting-thousands-planned-mrs.trycloudflare.com";
+const BaseUrl = "https://saturday-in-copyright-tournaments.trycloudflare.com";
 
 interface SimilarExample {
   user_story: string;
@@ -446,8 +446,8 @@ interface SimilarExample {
 
 const TestCaseGenerator: React.FC = () => {
   const taskContext = useTask();
-  const pollingRef = useRef<NodeJS.Timeout | null>(null); // ✅ Correctly used to store the single active poll
-  const isMountedRef = useRef(true); // Tracks if the component is mounted
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true); 
 
   const [userStory, setUserStory] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -471,13 +471,10 @@ const TestCaseGenerator: React.FC = () => {
     onError: (error: any) => void,
     interval: number = 6000
   ) => {
-    // FIX: Ensure no other poll is running before starting a new one.
     stopPolling();
 
     const intervalId = setInterval(async () => {
-      // If component has unmounted while waiting for interval, do nothing.
       if (!isMountedRef.current) {
-        // This is a safety net, the main cleanup is in useEffect's return.
         stopPolling();
         return;
       }
